@@ -76,6 +76,9 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
             if(shouldRebuild) {
                 var calendar = $(BEMHTML.apply({
                     block:'calendar',
+                    mods:{
+                        theme:'islands'
+                    },
                     js:{
                         months:this.params.months,
                         weekdays:this.params.weekdays
@@ -86,10 +89,6 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
                 bemDom.replace(this.domElem, calendar);
 
             } else {
-                console.log(this._elems('day'));
-                console.log(this._firstDayIndex);
-                console.log(this._elems('day')
-                        .get(this._firstDayIndex + this._val.getDate() - 1));
                 this._selectDayElem(
                     this._elems('day')
                         .get(this._firstDayIndex + this._val.getDate() - 1)
@@ -109,6 +108,9 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
         this._month.setMonth(this._month.getMonth()+step);
         var calendar = $(BEMHTML.apply({
                     block:'calendar',
+                    mods:{
+                        theme:'islands'
+                    },
                     js:{
                         months:this.params.months,
                         weekdays:this.params.weekdays
