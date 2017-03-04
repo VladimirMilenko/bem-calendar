@@ -21,21 +21,6 @@
     ],
     content: [
         {
-            attrs: {
-                style: 'padding: 100px'
-            },
-            content: [{
-                block: 'input',
-                mods: {
-                    theme: 'islands',
-                    size: 'm',
-                    'has-calendar': true
-                },
-                weekdays: ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'],
-                months: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-            }]
-        },
-        {
             block:'calendar',
             mods:{
                 theme:'islands'

@@ -5,7 +5,7 @@
             { block: 'jquery', elem: 'event', mods: { type: 'pointer' } },
 
             {
-                elems: ['arrow', 'day', 'dayname']
+                elems: ['arrow', 'day', 'dayname','title','layout','weeks']
             },
             {
                 mods: { theme: 'islands' }

@@ -20,27 +20,29 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
     onSetMod: {
         js: {
             inited: function() {
-                this._val = null;
+                this._val = this.params.val ? new Date(this.params.val) : null;
                 this._selectedDayElem = null;
                 this._firstDayIndex = 0;
                 var today = this._getToday();
 
-                this._month = today;
-                this._month.setDate(1);
+                if(this.params.month){
+                    this._month = new Date(this.params.month);
+                } else {
+                    if(this.params.val){
+                        this._month = new Date(this.params.val);
+                        this._month.setDate(1);
+                    }
 
-                this.setLimits(
-                    this.params.earlierLimit,
-                    this.params.laterLimit
-                );
-                if(this._isValidDate(this.params.val)) {
-                    this.setVal(this.params.val);
-                }  else {
-                    this.setVal(today);
-                }
-                if(!this._elem('container')) {
-                    this._build();
                 }
 
+
+                var dayElems = this.findChildElems('day');
+                for(var i=0;i<dayElems.size();i++){
+                    if(dayElems.get(i).domElem.data('day')) {
+                        this._firstDayIndex = i;
+                        break;
+                    }
+                }
             }
         }
     },
@@ -51,7 +53,7 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
      * @returns {?Date}
      */
     getVal: function() {
-        return this._val;
+        return this.params.val;
     },
 
     /**
@@ -71,9 +73,23 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
             this._month = new Date(this._val.getTime());
             this._month.setDate(1);
 
-            if(!this._elem('container') || shouldRebuild) {
-                this._build();
+            if(shouldRebuild) {
+                var calendar = $(BEMHTML.apply({
+                    block:'calendar',
+                    js:{
+                        months:this.params.months,
+                        weekdays:this.params.weekdays
+                    },
+                    val:this._val
+                }));
+
+                bemDom.replace(this.domElem, calendar);
+
             } else {
+                console.log(this._elems('day'));
+                console.log(this._firstDayIndex);
+                console.log(this._elems('day')
+                        .get(this._firstDayIndex + this._val.getDate() - 1));
                 this._selectDayElem(
                     this._elems('day')
                         .get(this._firstDayIndex + this._val.getDate() - 1)
@@ -90,10 +106,18 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
      * @returns {calendar} this
      */
     switchMonth: function(step) {
-        this._month.setMonth(this._month.getMonth() + step);
-
-        this._nextTick(this._build);
-
+        this._month.setMonth(this._month.getMonth()+step);
+        var calendar = $(BEMHTML.apply({
+                    block:'calendar',
+                    js:{
+                        months:this.params.months,
+                        weekdays:this.params.weekdays
+                    },
+                    month:this._month
+            }));
+        console.log(calendar);
+        console.log(this._month);
+        bemDom.replace(this.domElem,calendar);
         return this;
     },
     /**
@@ -192,9 +216,10 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
     },
 
     _formatDate: function(date) {
-        var year = date.getFullYear(),
-            month = date.getMonth() + 1,
-            day = date.getDate();
+        var dateObject = new Date(date);
+        var year = dateObject.getFullYear(),
+            month = dateObject.getMonth() + 1,
+            day = dateObject.getDate();
 
         return [leadZero(day), leadZero(month), year].join('.');
     },
@@ -202,167 +227,6 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
     _isValidDate: function(date) {
         return !(this._earlierLimit && date < this._earlierLimit ||
             this._laterLimit && date > this._laterLimit);
-    },
-    _isWeekend: function(dayNumber) {
-        return dayNumber > 4;
-    },
-    _build: function() {
-        var rows = [];
-        rows.push(this._buildShortWeekdays());
-        rows = rows.concat(this._buildMonth(this._month));
-
-        var calendar = $(BEMHTML.apply({
-            block: 'calendar',
-            elem: 'container',
-            content: [
-                this._buildTitle(this._month),
-                {
-                    elem: 'layout',
-                    tag: 'table',
-                    content: rows.map(function(row) {
-                        return {
-                            elem: 'row',
-                            tag: 'tr',
-                            content: row
-                        };
-                    })
-                }
-            ]
-        }));
-        bemDom.update(this.domElem, calendar);
-        this._selectedDayElem = this.findChildElem({ elem: 'day', modName: 'state', modVal: 'current' });
-    },
-
-    _calcWeeks: function(month) {
-        var weekDay,
-            weeks = [],
-            countDays = 7,
-            lastDay = 6,
-            week = new Array(countDays),
-            dateIterator = new Date(month.getTime());
-
-        for(
-            dateIterator.setDate(1);
-            dateIterator.getMonth() === month.getMonth();
-            dateIterator.setDate(dateIterator.getDate() + 1)
-        ) {
-            var iterationResult = this._processWeek(dateIterator, week, weeks, lastDay, countDays);
-            week = iterationResult.week;
-            weekDay = iterationResult.weekDay;
-        }
-
-        if(weekDay !== lastDay) {
-            weeks.push(week);
-        }
-
-        return weeks;
-    },
-    _processWeek: function(dateIterator, week, weeks, lastDay, countDays) {
-        var weekDay = (dateIterator.getDay() + lastDay) % countDays; // Получаем 0 - пн, 1 - вт, и т.д.
-
-        week[weekDay] = new Date(dateIterator.getTime());
-
-        if(weekDay === lastDay) {
-            weeks.push(week);
-            week = new Array(countDays);
-        }
-        return { week: week, weekDay: weekDay };
-    },
-    _buildMonth: function(month) {
-        var rows = [],
-            isIndexSet = false;
-        this._calcWeeks(month).forEach(function(week) {
-            var row = [],
-                _this = this;
-            $.each(week, function(i, day) {
-                var off = !_this._isValidDate(day),
-                    val = _this.getVal(),
-                    weekend = _this._isWeekend(i),
-                    dayElem = {
-                        elem: 'day',
-                        tag: 'td',
-                        content: {
-                            elem: 'inner',
-                            content: day ? day.getDate() : ''
-                        },
-                        attrs: {},
-                        elemMods: {}
-                    };
-
-                if(day && !off) {
-                    dayElem.attrs['data-day'] = _this._formatDate(day);
-                    if(!isIndexSet) {
-                        _this._firstDayIndex = i;
-                        isIndexSet = true;
-                    }
-                }
-
-                if(weekend) {
-                    dayElem.elemMods.type = off ? 'weekend-off' : 'weekend';
-                } else if(off) {
-                    dayElem.elemMods.type = 'off';
-                }
-
-                if(day && val && day.getTime() === val.getTime()) {
-                    dayElem.elemMods.state = 'current';
-                }
-
-                row.push(dayElem);
-            });
-
-            rows.push(row);
-        }, this);
-
-        return rows;
-    },
-    _buildShortWeekdays: function() {
-        var row = [];
-
-        this.params.weekdays.forEach(function(name, i) {
-            var dayname = {
-                elem: 'dayname',
-                tag: 'th',
-                content: name
-            };
-
-            if(this._isWeekend(i)) {
-                dayname.elemMods = { type: 'weekend' };
-            }
-
-            row.push(dayname);
-        }, this);
-
-        return row;
-    },
-
-    _buildTitle: function(month) {
-        var prevMonth = !this._earlierLimit || compareMonths(month, this._earlierLimit) > 0,
-            nextMonth = !this._laterLimit || compareMonths(this._laterLimit, month) > 0;
-
-        return {
-            elem: 'title',
-            content: [
-                {
-                    elem: 'arrow',
-                    elemMods: {
-                        direction: 'left',
-                        disabled: !prevMonth
-                    }
-                },
-                {
-                    elem: 'arrow',
-                    elemMods: {
-                        direction: 'right',
-                        disabled: !nextMonth
-                    }
-                },
-                {
-                    elem: 'name',
-                    content: this.params.months[month.getMonth()] +
-                        ' ' + month.getFullYear()
-                }
-            ]
-        };
     },
 
     _onArrowClick: function(e) {
@@ -376,7 +240,7 @@ provide(bemDom.declBlock(this.name, /** @lends calendar.prototype */{
     _onDayClick: function(e) {
         var date = $(e.currentTarget).data('day');
         if(!date) return;
-
+        
         this.setVal(date);
 
         var val = this.getVal();
